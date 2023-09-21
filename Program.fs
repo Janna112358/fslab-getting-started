@@ -10,8 +10,7 @@ let rawData =
 // Note: Of course you can directly provide the path to a local source.
 let housesFull = Frame.ReadCsvString(rawData, hasHeaders = true, separators = "\t")
 
-// get dataframe with only some of the columns, and only houses not on the river
-let housesNotAtRiver =
+let housesWorkingData =
     let targetColumns =
         seq {
             "RoomsPerDwelling"
@@ -19,15 +18,41 @@ let housesNotAtRiver =
             "CharlesRiver"
         }
 
-    housesFull
-    |> Frame.sliceCols targetColumns
+    housesFull |> Frame.sliceCols targetColumns
+
+let housesNotAtRiver =
+    housesWorkingData
     |> Frame.filterRowValues (fun x -> x.GetAs<bool>("CharlesRiver") |> not)
 
+let housesAtRiver =
+    housesWorkingData
+    |> Frame.filterRowValues (fun x -> x.GetAs<bool>("CharlesRiver"))
 
-let pricesNotAtRiver: seq<float> =
+// let normalizeByTotal (values: seq<float>) =
+//     let total = Seq.sum (values)
+//     Seq.map (fun x -> x / total) values
+
+let homeValuesNotAtRiver: seq<float> =
     housesNotAtRiver.GetColumn "MedianHomeValue" |> Series.values
 
-Chart.Histogram(pricesNotAtRiver)
-|> Chart.withYAxisStyle ("median value of owner occupied home in 1000s")
-|> Chart.withXAxisStyle ("price distribution")
+let homeValuesAtRiver: seq<float> =
+    housesAtRiver.GetColumn "MedianHomeValue" |> Series.values
+
+[ Chart.Histogram(
+      homeValuesAtRiver,
+      Opacity = 0.66,
+      OffsetGroup = "A",
+      HistNorm = StyleParam.HistNorm.ProbabilityDensity
+  )
+  |> Chart.withTraceInfo "at river"
+  Chart.Histogram(
+      homeValuesNotAtRiver,
+      Opacity = 0.66,
+      OffsetGroup = "A",
+      HistNorm = StyleParam.HistNorm.ProbabilityDensity
+  )
+  |> Chart.withTraceInfo "not at river" ]
+|> Chart.combine
+|> Chart.withYAxisStyle ("median value of owner occupied homes in 1000s")
+|> Chart.withXAxisStyle ("Comparison of price distributions (noramlized)")
 |> Chart.show
