@@ -1,6 +1,6 @@
 # Jay's getting started with FsLab
 
-## What have I done in this repo so far
+## How I set up this repository/app
 
 1. Create a new F# console app:
 
@@ -16,14 +16,16 @@
 
 2. Initiate git
 
-        ```bash
+    a. Creat a local git repo with
+       ```bash
         git init
         ```
 
-    And then create a repo on github and link to this.
-    Copied in the .gitignore from the Forest project and removed all the Forest-specific lines.
+    b. Go to github and follow the steps there to create a repository and set it up as a remote for this.
+   
+    c. Copied in the .gitignore from the Forest project and removed all the Forest-specific lines.
 
-3. Install local dotnet tools
+4. Install local dotnet tools
 
     a. Create a new tool manifest with
 
@@ -43,6 +45,6 @@
         dotnet tool install fantomas
         ```
 
-4. Add packages from the [FsLab Getting Started post](https://fslab.org/blog/posts/getting-started.html) (but using paket rather than opening in script).
+5. Add packages from the [FsLab Getting Started post](https://fslab.org/blog/posts/getting-started.html) (but using paket rather than opening in script).
     - FSharp.Data
     - Deedle
