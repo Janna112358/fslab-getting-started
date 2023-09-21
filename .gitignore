@@ -1,0 +1,21 @@
+# paket dependency manager
+.paket/
+paket-files/
+packages
+
+# other
+.ionide
+.fake
+.farmer
+.vscode
+
+# netcore files
+obj/
+bin/
+tests/bin/
+tests/obj/
+
+artifacts/
+deploy/
+version.props
+AssemblyInfo.fs
