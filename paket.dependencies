@@ -4,3 +4,4 @@ storage: none
 framework: net6.0
 nuget Deedle
 nuget FSharp.Data
+nuget Plotly.NET
