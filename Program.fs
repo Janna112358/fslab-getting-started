@@ -7,4 +7,6 @@ let rawData =
 
 // And create a data frame object using the ReadCsvString method provided by Deedle.
 // Note: Of course you can directly provide the path to a local source.
-let df = Frame.ReadCsvString(rawData, hasHeaders = true, separators = "\t")
+let dataFrame = Frame.ReadCsvString(rawData, hasHeaders = true, separators = "\t")
+
+dataFrame.Print true
