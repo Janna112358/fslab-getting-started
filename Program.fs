@@ -1,6 +1,10 @@
 ﻿open FSharp.Data
 open Deedle
 open Plotly.NET
+open FSharp.Stats
+open FSharpAux
+open FSharp.Stats.Correlation
+open Fitting.LinearRegression.OLS
 
 // Retrieve data using the FSharp.Data package
 let rawData =
@@ -8,9 +12,10 @@ let rawData =
 
 // And create a data frame object using the ReadCsvString method provided by Deedle.
 // Note: Of course you can directly provide the path to a local source.
-let housesFull = Frame.ReadCsvString(rawData, hasHeaders = true, separators = "\t")
+let housesAllColumns =
+    Frame.ReadCsvString(rawData, hasHeaders = true, separators = "\t")
 
-let housesWorkingData =
+let houses =
     let targetColumns =
         seq {
             "RoomsPerDwelling"
@@ -18,41 +23,49 @@ let housesWorkingData =
             "CharlesRiver"
         }
 
-    housesFull |> Frame.sliceCols targetColumns
+    housesAllColumns |> Frame.sliceCols targetColumns
 
-let housesNotAtRiver =
-    housesWorkingData
-    |> Frame.filterRowValues (fun x -> x.GetAs<bool>("CharlesRiver") |> not)
+let innerJoinUnzip (data: Frame<int, string>) (columnA: string) (columnB: string) =
+    let seriesA: Series<_, float> = data |> Frame.getCol columnA
+    let seriesB: Series<_, float> = data |> Frame.getCol columnB
+    Series.zipInner seriesA seriesB |> Series.values |> Seq.unzip
 
-let housesAtRiver =
-    housesWorkingData
-    |> Frame.filterRowValues (fun x -> x.GetAs<bool>("CharlesRiver"))
+let correlate (data: Frame<int, string>) (columnA: string) (columnB: string) =
+    innerJoinUnzip data columnA columnB ||> Seq.pearson
 
-// let normalizeByTotal (values: seq<float>) =
-//     let total = Seq.sum (values)
-//     Seq.map (fun x -> x / total) values
+let linearModels (data: Frame<int, string>) (label: string) (columnA: string) (columnB: string) =
+    let valuesA, valuesB = innerJoinUnzip data columnA columnB
 
-let homeValuesNotAtRiver: seq<float> =
-    housesNotAtRiver.GetColumn "MedianHomeValue" |> Series.values
+    let coefficients = Linear.Univariable.fit (vector valuesA) (vector valuesB)
+    let c0 = coefficients.getCoefficient 0
+    let c1 = coefficients.getCoefficient 1
+    let predictedB = valuesA |> Seq.map (Linear.Univariable.predict coefficients)
 
-let homeValuesAtRiver: seq<float> =
-    housesAtRiver.GetColumn "MedianHomeValue" |> Series.values
+    [ Chart.Point(valuesA, valuesB) |> Chart.withTraceInfo $"{label}: data"
+      Chart.Line(valuesA, predictedB)
+      |> Chart.withTraceInfo $"{label}: prediction y = {c1} x + {c0}" ]
+    |> Chart.combine
+    |> Chart.withXAxisStyle (columnA)
+    |> Chart.withYAxisStyle (columnB)
 
-[ Chart.Histogram(
-      homeValuesAtRiver,
-      Opacity = 0.66,
-      OffsetGroup = "A",
-      HistNorm = StyleParam.HistNorm.ProbabilityDensity
-  )
-  |> Chart.withTraceInfo "at river"
-  Chart.Histogram(
-      homeValuesNotAtRiver,
-      Opacity = 0.66,
-      OffsetGroup = "A",
-      HistNorm = StyleParam.HistNorm.ProbabilityDensity
-  )
-  |> Chart.withTraceInfo "not at river" ]
-|> Chart.combine
-|> Chart.withYAxisStyle ("median value of owner occupied homes in 1000s")
-|> Chart.withXAxisStyle ("Comparison of price distributions (noramlized)")
-|> Chart.show
+[<EntryPoint>]
+let main args =
+    let housesNotAtRiver =
+        houses |> Frame.filterRowValues (fun x -> x.GetAs<bool>("CharlesRiver") |> not)
+
+    let housesAtRiver =
+        houses |> Frame.filterRowValues (fun x -> x.GetAs<bool>("CharlesRiver"))
+
+    // Histogram.histogram houses |> Chart.show
+
+    correlate houses "MedianHomeValue" "RoomsPerDwelling"
+    |> printfn "Correlation between prices and number of rooms: %A"
+
+    [ linearModels housesNotAtRiver "not at river" "RoomsPerDwelling" "MedianHomeValue"
+      linearModels housesAtRiver "at river" "RoomsPerDwelling" "MedianHomeValue" ]
+    |> Chart.combine
+    |> Chart.withSize (1200., 700.)
+    |> Chart.show
+
+
+    0

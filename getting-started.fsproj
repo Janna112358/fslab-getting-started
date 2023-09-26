@@ -6,6 +6,7 @@
     <RootNamespace>getting_started</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Histogram.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project=".paket\Paket.Restore.targets" />
